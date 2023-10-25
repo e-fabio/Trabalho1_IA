@@ -3,30 +3,21 @@
 #include <stdbool.h>
 #include <locale.h>
 #include "matrizes_9.h"
+#include "matrizes_10.h"
 
-#define MAX_SIZE 9
+#define MAX_SIZE 10
 
-int visited[MAX_SIZE][MAX_SIZE];
 int stack[MAX_SIZE * MAX_SIZE];
 int top = -1;
 
-void zerarVisitados()
+void zerarVisitados(int tamanhoMatriz, int **visitados)
 {
-  for (int i = 0; i < 9; i++)
+  for (int i = 0; i < tamanhoMatriz; i++)
   {
-    for (int j = 0; j < 9; j++)
+    for (int j = 0; j < tamanhoMatriz; j++)
     {
-      visited[i][j] = 0;
+      visitados[i][j] = 0;
     }
-  }
-}
-
-void esvaziarPilha()
-{
-  while (top != -1)
-  {
-    int nx, ny;
-    pop(&nx, &ny);
   }
 }
 
@@ -42,75 +33,21 @@ void pop(int *x, int *y)
   *x = stack[top--];
 }
 
-int is_valid(int x, int y, int matriz[9][9])
+void esvaziarPilha()
 {
-  return x >= 0 && x < MAX_SIZE && y >= 0 && y < MAX_SIZE && matriz[x][y] == 1 && visited[x][y] != 1;
-}
-
-bool dfs(int x, int y, int matriz[9][9], int lMax)
-{
-  printf("DFS X = %d Y = %d\n", x, y);
-  int l = 1;
-  visited[x][y] = 1;
-  push(x, y);
-
-  while (top != -1 && l <= lMax)
+  while (top != -1)
   {
-    // printf("Nivel local l = %d\n", l);
-
     int nx, ny;
     pop(&nx, &ny);
-
-    // printf("X = %d Y = %d\n", nx, ny);
-
-    int dx[] = {-1, 0, 1, 0};
-    int dy[] = {0, 1, 0, -1};
-
-    for (int i = 0; i < 4; i++)
-    {
-      int nnx = nx + dx[i]; // -1
-      int nny = ny + dy[i]; // 3
-
-      // printf("nnx = %d nny = %d\n", nnx, nny);
-      if (matriz[nnx][nny] == 3)
-      {
-        printf("Achou X = %d Y = %d\n", nnx, nny);
-        return true;
-      }
-      else if (is_valid(nnx, nny, matriz))
-      {
-        printf("Visitado X = %d Y = %d\n", nnx, nny);
-        visited[nnx][nny] = 1;
-        push(nnx, nny);
-        l++;
-      }
-    }
-  }
-
-  return false;
-}
-
-void dfs_iterativa(int x, int y, int matriz[9][9])
-{
-  int lMax = 1;
-  zerarVisitados();
-  esvaziarPilha();
-
-  while (!dfs(x, y, matriz, lMax))
-  {
-    esvaziarPilha();
-    zerarVisitados();
-    lMax++;
-    printf("Nivel maximo lMax = %d\n", lMax);
   }
 }
 
-void exibirMatriz_9x9(int matriz[9][9])
+void exibirMatrizFixa(int tamanhoMatriz, int matriz[tamanhoMatriz][tamanhoMatriz])
 {
   int i, j;
-  for (i = 0; i < 9; i++)
+  for (i = 0; i < tamanhoMatriz; i++)
   {
-    for (j = 0; j < 9; j++)
+    for (j = 0; j < tamanhoMatriz; j++)
     {
       printf("%d ", matriz[i][j]);
     }
@@ -118,25 +55,243 @@ void exibirMatriz_9x9(int matriz[9][9])
   }
 }
 
-void exibirOpcoesLabirinto(int tamanho)
+void exibirMatriz(int tamanhoMatriz, int **matriz)
 {
-  setlocale(LC_ALL, "Portuguese");
+  int i, j;
+  for (i = 0; i < tamanhoMatriz; i++)
+  {
+    for (j = 0; j < tamanhoMatriz; j++)
+    {
+      printf("%d ", matriz[i][j]);
+    }
+    printf("\n");
+  }
+}
 
-  switch (tamanho)
+int encontrouSaida(int x, int y, int tamanhoMatriz, int **matriz)
+{
+  return x >= 0 && x < tamanhoMatriz && y >= 0 && y < tamanhoMatriz && matriz[x][y] == 3;
+}
+
+int movimentoValido(int x, int y, int tamanhoMatriz, int **matriz, int **visitados)
+{
+  return x >= 0 && x < tamanhoMatriz && y >= 0 && y < tamanhoMatriz && matriz[x][y] == 1 && visitados[x][y] == 0;
+}
+
+bool buscaProfundidade(int x, int y, int tamanhoMatriz, int **matriz, int **visitados, int lMax)
+{
+  printf("\n~~~~~~ Iniciando busca em profundidade iterativa:  X = %d, Y = %d, Nivel Maximo = %d ~~~~~~\n", x, y, lMax);
+  int l = 1;
+
+  visitados[x][y] = 1;
+
+  push(x, y);
+
+  while (top != -1 && l <= lMax)
+  {
+    printf("Nivel %d\n", l);
+
+    int nx, ny;
+    pop(&nx, &ny);
+    bool aumentaNivel = true;
+
+    int dx[] = {-1, 0, 1, 0};
+    int dy[] = {0, 1, 0, -1};
+
+    for (int i = 0; i < 4; i++)
+    {
+      int nnx = nx + dx[i];
+      int nny = ny + dy[i];
+
+      if (encontrouSaida(nnx, nny, tamanhoMatriz, matriz))
+      {
+        printf("Visitado X = %d Y = %d\n", nnx, nny);
+        visitados[nnx][nny] = 1;
+        exibirMatriz(tamanhoMatriz, visitados);
+        printf("~~~~~~ Achou X = %d Y = %d ~~~~~~\n", nnx, nny);
+
+        return true;
+      }
+      else if (movimentoValido(nnx, nny, tamanhoMatriz, matriz, visitados))
+      {
+        printf("Visitado X = %d Y = %d\n", nnx, nny);
+        visitados[nnx][nny] = 1;
+        exibirMatriz(tamanhoMatriz, visitados);
+        // exibirMatriz(tamanhoMatriz, matriz);
+        push(nnx, nny);
+
+        if (aumentaNivel == true)
+        {
+          ++l;
+          aumentaNivel = false;
+        }
+      }
+    }
+  }
+
+  printf("~~~~~~ Saida nao encontrada ~~~~~~\n");
+
+  return false;
+}
+
+void encontrarPontoPartida(int *x, int *y, int tamanhoMatriz, int **matriz)
+{
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    for (int j = 0; j < tamanhoMatriz; j++)
+    {
+      if (matriz[i][j] == 2)
+      {
+        *x = i;
+        *y = j;
+        return;
+      }
+    }
+  }
+}
+
+void buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz)
+{
+  int lMax = 1;
+
+  int **visitados = (int **)malloc(tamanhoMatriz * sizeof(int *));
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    visitados[i] = malloc(tamanhoMatriz * sizeof(int));
+  }
+  zerarVisitados(tamanhoMatriz, visitados);
+  esvaziarPilha();
+
+  int x, y;
+  encontrarPontoPartida(&x, &y, tamanhoMatriz, matriz);
+
+  while (!buscaProfundidade(x, y, tamanhoMatriz, matriz, visitados, lMax))
+  {
+    zerarVisitados(tamanhoMatriz, visitados);
+    esvaziarPilha();
+    ++lMax;
+  }
+
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    free(visitados[i]);
+  }
+  free(visitados);
+}
+
+void exibirOpcoesLabirinto(int tamanhoMatriz)
+{
+  switch (tamanhoMatriz)
   {
   case 9:
     printf("\n\nOpcao 1:\n");
-    exibirMatriz_9x9(matriz_1);
+    exibirMatrizFixa(tamanhoMatriz, matriz_1);
+
     printf("\n\nOpcao 2:\n");
-    exibirMatriz_9x9(matriz_2);
+    exibirMatrizFixa(tamanhoMatriz, matriz_2);
+
     printf("\n\nOpcao 3:\n");
-    exibirMatriz_9x9(matriz_3);
+    exibirMatrizFixa(tamanhoMatriz, matriz_3);
+
     printf("\n\nOpcao 4:\n");
-    exibirMatriz_9x9(matriz_4);
+    exibirMatrizFixa(tamanhoMatriz, matriz_4);
+
     printf("\n\nOpcao 5:\n");
-    exibirMatriz_9x9(matriz_5);
+    exibirMatrizFixa(tamanhoMatriz, matriz_5);
     break;
+
+  case 10:
+    printf("\n\nOpcao 1:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_10_1);
+
+    printf("\n\nOpcao 2:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_10_2);
+
+    printf("\n\nOpcao 3:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_10_3);
+
+    printf("\n\nOpcao 4:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_10_4);
+
+    printf("\n\nOpcao 5:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_10_5);
+    break;
+
   default:
+    break;
+  }
+}
+
+int **gerarMatriz(int tamanhoMatriz, int matriz[tamanhoMatriz][tamanhoMatriz])
+{
+  int **novaMatriz = (int **)malloc(tamanhoMatriz * sizeof(int *));
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    novaMatriz[i] = malloc(tamanhoMatriz * sizeof(int));
+  }
+
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    novaMatriz[i] = matriz[i];
+  }
+
+  return novaMatriz;
+}
+
+int **selecionarOpcao(int tamanhoMatriz, int opcaoLabirinto)
+{
+  switch (tamanhoMatriz)
+  {
+  case 9:
+    switch (opcaoLabirinto)
+    {
+    case 1:
+      return gerarMatriz(tamanhoMatriz, matriz_1);
+      break;
+    case 2:
+      return gerarMatriz(tamanhoMatriz, matriz_2);
+      break;
+    case 3:
+      return gerarMatriz(tamanhoMatriz, matriz_3);
+      break;
+    case 4:
+      return gerarMatriz(tamanhoMatriz, matriz_4);
+      break;
+    case 5:
+      return gerarMatriz(tamanhoMatriz, matriz_5);
+      break;
+    default:
+      return gerarMatriz(tamanhoMatriz, matriz_1);
+      break;
+    }
+    break;
+
+  case 10:
+    switch (opcaoLabirinto)
+    {
+    case 1:
+      return gerarMatriz(tamanhoMatriz, matriz_10_1);
+      break;
+    case 2:
+      return gerarMatriz(tamanhoMatriz, matriz_10_2);
+      break;
+    case 3:
+      return gerarMatriz(tamanhoMatriz, matriz_10_3);
+      break;
+    case 4:
+      return gerarMatriz(tamanhoMatriz, matriz_10_4);
+      break;
+    case 5:
+      return gerarMatriz(tamanhoMatriz, matriz_10_5);
+      break;
+    default:
+      return gerarMatriz(tamanhoMatriz, matriz_10_1);
+      break;
+    }
+    break;
+
+  default:
+    return gerarMatriz(tamanhoMatriz, matriz_1);
     break;
   }
 }
@@ -145,31 +300,42 @@ int main(void)
 {
   setlocale(LC_ALL, "Portuguese");
 
-  int tamanho, opcaoLabirinto, opcaoAlgoritmo;
+  int tamanhoMatriz, opcaoLabirinto, opcaoAlgoritmo;
   do
   {
-    zerarVisitados();
+    printf("\n\n~~~~~~ Labirinto ~~~~~~\n\n");
+    printf("Digite a dimensao do labirinto ou 0 para sair:\n");
+    scanf("%d", &tamanhoMatriz);
 
-    printf("Digite o tamanho do labirinto:\n8 -> 8x8\n9 -> 9x9\n10 -> 10x10\n");
-    scanf("%d", &tamanho);
-
-    printf("Escolha um labirinto:\n");
-    exibirOpcoesLabirinto(tamanho);
-    printf("Digite a opcao desejada:\n");
-    scanf("%d", &opcaoLabirinto);
-    printf("Escolha um algoritmo:\n1 - Busca em Profundidade Iterativa\n2 - Busca de Menor Custo\n3 - Busca A*\n4 - Subida de Encosta\n\n");
-    scanf("%d", &opcaoAlgoritmo);
-
-    switch (opcaoAlgoritmo)
+    if (tamanhoMatriz != 0)
     {
-    case 1:
-      dfs_iterativa(3, 0, matriz_1);
-      break;
-    default:
-      break;
+      printf("\nEscolha um labirinto:");
+      exibirOpcoesLabirinto(tamanhoMatriz);
+
+      printf("Digite a opcao desejada:\n");
+      scanf("%d", &opcaoLabirinto);
+      int **matrizSelecionada = selecionarOpcao(tamanhoMatriz, opcaoLabirinto);
+
+      printf("\nEscolha um algoritmo:\n1 - Busca em Profundidade Iterativa\n2 - Busca de Menor Custo\n3 - Busca A*\n4 - Subida de Encosta\n\n");
+      scanf("%d", &opcaoAlgoritmo);
+
+      switch (opcaoAlgoritmo)
+      {
+      case 1:
+        buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada);
+        break;
+      default:
+        break;
+      }
+
+      for (int i = 0; i < tamanhoMatriz; i++)
+      {
+        free(matrizSelecionada[i]);
+      }
+      free(matrizSelecionada);
     }
 
-  } while (opcaoLabirinto != 0);
+  } while (tamanhoMatriz != 0);
 
   return 0;
 }
