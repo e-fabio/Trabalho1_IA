@@ -5,10 +5,10 @@
 #include "matrizes_9.h"
 #include "matrizes_10.h"
 
-#define MAX_SIZE 10
-
-int stack[MAX_SIZE * MAX_SIZE];
-int top = -1;
+#define FREE 1
+#define OBSTACLE 0
+#define START 2
+#define END 3
 
 void zerarVisitados(int tamanhoMatriz, int **visitados)
 {
@@ -21,26 +21,35 @@ void zerarVisitados(int tamanhoMatriz, int **visitados)
   }
 }
 
-void push(int x, int y)
-{
-  stack[++top] = x;
-  stack[++top] = y;
+
+typedef struct {
+    int x, y;
+} Point;
+
+typedef struct {
+    Point points[81]; // o tamanho máximo do caminho é 81 (9x9)
+    int top;
+} Stack;
+
+void stack_init(Stack *stack) {
+    stack->top = -1;
 }
 
-void pop(int *x, int *y)
-{
-  *y = stack[top--];
-  *x = stack[top--];
+void stack_push(Stack *stack, int x, int y) {
+    stack->top++;
+    stack->points[stack->top].x = x;
+    stack->points[stack->top].y = y;
 }
 
-void esvaziarPilha()
-{
-  while (top != -1)
-  {
-    int nx, ny;
-    pop(&nx, &ny);
-  }
+void stack_pop(Stack *stack) {
+    stack->top--;
 }
+
+Point stack_top(Stack *stack) {
+    return stack->points[stack->top];
+}
+
+int nodes_visited = 0;
 
 void exibirMatrizFixa(int tamanhoMatriz, int matriz[tamanhoMatriz][tamanhoMatriz])
 {
@@ -73,66 +82,6 @@ int encontrouSaida(int x, int y, int tamanhoMatriz, int **matriz)
   return x >= 0 && x < tamanhoMatriz && y >= 0 && y < tamanhoMatriz && matriz[x][y] == 3;
 }
 
-int movimentoValido(int x, int y, int tamanhoMatriz, int **matriz, int **visitados)
-{
-  return x >= 0 && x < tamanhoMatriz && y >= 0 && y < tamanhoMatriz && matriz[x][y] == 1 && visitados[x][y] == 0;
-}
-
-bool buscaProfundidade(int x, int y, int tamanhoMatriz, int **matriz, int **visitados, int lMax)
-{
-  printf("\n~~~~~~ Iniciando busca em profundidade iterativa:  X = %d, Y = %d, Nivel Maximo = %d ~~~~~~\n", x, y, lMax);
-  int l = 1;
-
-  visitados[x][y] = 1;
-
-  push(x, y);
-
-  while (top != -1 && l <= lMax)
-  {
-    printf("Nivel %d\n", l);
-
-    int nx, ny;
-    pop(&nx, &ny);
-    bool aumentaNivel = true;
-
-    int dx[] = {-1, 0, 1, 0};
-    int dy[] = {0, 1, 0, -1};
-
-    for (int i = 0; i < 4; i++)
-    {
-      int nnx = nx + dx[i];
-      int nny = ny + dy[i];
-
-      if (encontrouSaida(nnx, nny, tamanhoMatriz, matriz))
-      {
-        printf("Visitado X = %d Y = %d\n", nnx, nny);
-        visitados[nnx][nny] = 1;
-        exibirMatriz(tamanhoMatriz, visitados);
-        printf("~~~~~~ Achou X = %d Y = %d ~~~~~~\n", nnx, nny);
-
-        return true;
-      }
-      else if (movimentoValido(nnx, nny, tamanhoMatriz, matriz, visitados))
-      {
-        printf("Visitado X = %d Y = %d\n", nnx, nny);
-        visitados[nnx][nny] = 1;
-        exibirMatriz(tamanhoMatriz, visitados);
-        // exibirMatriz(tamanhoMatriz, matriz);
-        push(nnx, nny);
-
-        if (aumentaNivel == true)
-        {
-          ++l;
-          aumentaNivel = false;
-        }
-      }
-    }
-  }
-
-  printf("~~~~~~ Saida nao encontrada ~~~~~~\n");
-
-  return false;
-}
 
 void encontrarPontoPartida(int *x, int *y, int tamanhoMatriz, int **matriz)
 {
@@ -150,33 +99,50 @@ void encontrarPontoPartida(int *x, int *y, int tamanhoMatriz, int **matriz)
   }
 }
 
-void buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz)
-{
-  int lMax = 1;
-
-  int **visitados = (int **)malloc(tamanhoMatriz * sizeof(int *));
-  for (int i = 0; i < tamanhoMatriz; i++)
-  {
-    visitados[i] = malloc(tamanhoMatriz * sizeof(int));
-  }
-  zerarVisitados(tamanhoMatriz, visitados);
-  esvaziarPilha();
-
-  int x, y;
-  encontrarPontoPartida(&x, &y, tamanhoMatriz, matriz);
-
-  while (!buscaProfundidade(x, y, tamanhoMatriz, matriz, visitados, lMax))
-  {
-    zerarVisitados(tamanhoMatriz, visitados);
-    esvaziarPilha();
-    ++lMax;
-  }
-
-  for (int i = 0; i < tamanhoMatriz; i++)
-  {
-    free(visitados[i]);
-  }
-  free(visitados);
+int dfs( int **matriz, int x, int y, Stack *path, int depth, int limit, int **visited) {
+    
+    if (matriz[x][y] == OBSTACLE || depth > limit || visited[x][y]) {
+        return 0;
+    }
+    visited[x][y] = 1;
+    nodes_visited++;
+    if (matriz[x][y] == END) {
+        stack_push(path, x, y);
+        return 1;
+    }
+    matriz[x][y] = OBSTACLE;
+    stack_push(path, x, y);
+    if ((x > 0 && dfs(matriz, x-1, y, path, depth+1, limit, visited)) ||
+        (x < 8 && dfs(matriz, x+1, y, path, depth+1, limit, visited)) ||
+        (y > 0 && dfs(matriz, x, y-1, path, depth+1, limit, visited)) ||
+        (y < 8 && dfs(matriz, x, y+1, path, depth+1, limit, visited))) {
+        return 1;
+    }
+    matriz[x][y] = FREE; // desmarca a célula atual
+    stack_pop(path);
+    return 0;
+}
+int buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz, Stack *path){
+    int x, y;
+    encontrarPontoPartida(&x, &y, tamanhoMatriz, matriz);
+    for (int limit = 1; ; limit++) {
+        int **visitados = (int **)malloc(tamanhoMatriz * sizeof(int *));
+        for (int i = 0; i < tamanhoMatriz; i++)
+        {
+          visitados[i] = malloc(tamanhoMatriz * sizeof(int));
+        }
+        zerarVisitados(tamanhoMatriz, visitados); // limpa a matriz visited
+        nodes_visited = 0; // Zera o contador
+                        if (dfs(matriz, x, y, path, 0, limit, visitados)) {
+                            printf("Número de nós visitados: %d\n", nodes_visited);
+                            printf("Caminho encontrado com limite %d:\n", limit);
+                            for (int k = 0; k <= path->top; k++) {
+                                printf("(%d, %d)\n", path->points[k].x, path->points[k].y);
+                            }
+                            return 0;
+                        }
+            }
+        printf("Caminho não encontrado.\n");
 }
 
 void exibirOpcoesLabirinto(int tamanhoMatriz)
@@ -301,13 +267,15 @@ int main(void)
   setlocale(LC_ALL, "Portuguese");
 
   int tamanhoMatriz, opcaoLabirinto, opcaoAlgoritmo;
+    Stack path;
+    stack_init(&path);
   do
   {
     printf("\n\n~~~~~~ Labirinto ~~~~~~\n\n");
-    printf("Digite a dimensao do labirinto ou 0 para sair:\n");
+    printf("Digite a dimensao do labirinto ( 8, 9 ou 10) ou 0 para sair:\n");
     scanf("%d", &tamanhoMatriz);
 
-    if (tamanhoMatriz != 0)
+    if (tamanhoMatriz == 8 || tamanhoMatriz == 9 || tamanhoMatriz == 10)
     {
       printf("\nEscolha um labirinto:");
       exibirOpcoesLabirinto(tamanhoMatriz);
@@ -322,7 +290,7 @@ int main(void)
       switch (opcaoAlgoritmo)
       {
       case 1:
-        buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada);
+        buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada, &path);
         break;
       default:
         break;
@@ -333,6 +301,9 @@ int main(void)
         free(matrizSelecionada[i]);
       }
       free(matrizSelecionada);
+    }
+    else {
+        printf("Tamanho de matriz não válido, escolhe entre os tamanhos 8, 9 e 10/n");
     }
 
   } while (tamanhoMatriz != 0);
