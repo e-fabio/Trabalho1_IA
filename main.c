@@ -21,10 +21,138 @@ void zerarVisitados(int tamanhoMatriz, int **visitados)
   }
 }
 
+int nodes_visited = 0;
+int nivel = 0;
+
 
 typedef struct {
     int x, y;
 } Point;
+
+typedef struct Node {
+    Point point;
+    int g, h, f;
+    struct Node *parent;
+} Node;
+
+Node* openList[81];
+int openListSize = 0;
+
+Node* closedList[81];
+int closedListSize = 0;
+
+void push(Node* node, Node** list, int* size) {
+    list[*size] = node;
+    (*size)++;
+    nodes_visited++;
+}
+
+void pop(Node* node, Node** list, int* size) {
+    for (int i = 0; i < *size; i++) {
+        if (list[i] == node) {
+            for (int j = i; j < *size - 1; j++) {
+                list[j] = list[j+1];
+            }
+            (*size)--;
+            return;
+        }
+    }
+}
+
+Node* lowestFNode() {
+    Node* lowest = openList[0];
+    for (int i = 1; i < openListSize; i++) {
+        if (openList[i]->f < lowest->f) {
+            lowest = openList[i];
+        }
+    }
+    return lowest;
+}
+
+int heuristic(Point start, Point end) {
+    return abs(start.x - end.x) + abs(start.y - end.y);
+}
+
+Node* aStar(Point start, Point end, int **matriz) {
+    Node* startNode = (Node*)malloc(sizeof(Node));
+    startNode->point = start;
+    startNode->g = 0;
+    startNode->h = heuristic(start, end);
+    startNode->f = startNode->g + startNode->h;
+    startNode->parent = NULL;
+
+    push(startNode, openList, &openListSize);
+
+    while (openListSize > 0) {
+        Node* currentNode = lowestFNode();
+        if (currentNode->point.x == end.x && currentNode->point.y == end.y) {
+            return currentNode;
+        }
+
+        pop(currentNode, openList, &openListSize);
+        push(currentNode, closedList, &closedListSize);
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+
+                int newX = currentNode->point.x + dx;
+                int newY = currentNode->point.y + dy;
+
+                if (newX >= 0 && newX < 9 && newY >= 0 && newY < 9 && matriz[newX][newY])
+                {
+                                    Node* neighborNode = (Node*)malloc(sizeof(Node));
+                                    neighborNode->point.x = newX;
+                                    neighborNode->point.y = newY;
+
+                                    Node* neighborInClosedList = NULL;
+                                    for (int i = 0; i < closedListSize; i++) {
+                                        if (closedList[i]->point.x == newX && closedList[i]->point.y == newY) {
+                                            neighborInClosedList = closedList[i];
+                                            break;
+                                        }
+                                    }
+
+                                    if (neighborInClosedList != NULL) {
+                                        if (neighborInClosedList->g <= currentNode->g + 1) {
+                                            free(neighborNode);
+                                            continue;
+                                        }
+                                    }
+
+                                    int g = currentNode->g + 1;
+                                    int h = heuristic(neighborNode->point, end);
+                                    neighborNode->g = g;
+                                    neighborNode->h = h;
+                                    neighborNode->f = g + h;
+                                    neighborNode->parent = currentNode;
+
+                                    Node* neighborInOpenList = NULL;
+                                    for (int i = 0; i < openListSize; i++) {
+                                        if (openList[i]->point.x == newX && openList[i]->point.y == newY) {
+                                            neighborInOpenList = openList[i];
+                                            break;
+                                        }
+                                    }
+
+                                    if (neighborInOpenList == NULL) {
+                                        push(neighborNode, openList, &openListSize);
+                                    } else if (neighborInOpenList->g > neighborNode->g) {
+                                        neighborInOpenList->g = neighborNode->g;
+                                        neighborInOpenList->h = neighborNode->h;
+                                        neighborInOpenList->f = neighborNode->f;
+                                        neighborInOpenList->parent = currentNode;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return NULL;
+}
+
 
 typedef struct {
     Point points[81]; // o tamanho máximo do caminho é 81 (9x9)
@@ -48,8 +176,6 @@ void stack_pop(Stack *stack) {
 Point stack_top(Stack *stack) {
     return stack->points[stack->top];
 }
-
-int nodes_visited = 0;
 
 void exibirMatrizFixa(int tamanhoMatriz, int matriz[tamanhoMatriz][tamanhoMatriz])
 {
@@ -90,6 +216,22 @@ void encontrarPontoPartida(int *x, int *y, int tamanhoMatriz, int **matriz)
     for (int j = 0; j < tamanhoMatriz; j++)
     {
       if (matriz[i][j] == 2)
+      {
+        *x = i;
+        *y = j;
+        return;
+      }
+    }
+  }
+}
+
+void encontrarPontoFinal(int *x, int *y, int tamanhoMatriz, int **matriz)
+{
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    for (int j = 0; j < tamanhoMatriz; j++)
+    {
+      if (matriz[i][j] == 3)
       {
         *x = i;
         *y = j;
@@ -143,6 +285,35 @@ int buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz, Stack *path){
                         }
             }
         printf("Caminho não encontrado.\n");
+}
+
+void buscaAstar (int tamanhoMatriz, int **matriz){
+    Point start;
+    Point end;
+    int x,y;
+    encontrarPontoPartida(&x,&y, tamanhoMatriz, matriz);
+    start.x = x;
+    start.y = y;
+    encontrarPontoFinal(&x, &y, tamanhoMatriz, matriz);
+    end.x = x;
+    end.y = y;
+    
+    Node* endNode = aStar(start, end, matriz);
+
+        if (endNode == NULL) {
+            printf("Nenhum caminho encontrado.\n");
+        } else {
+            printf("Número de nós visitados: %d\n", nodes_visited);
+            printf("Caminho encontrado:\n");
+            Node* node = endNode;
+            while (node != NULL) {
+                printf("(%d, %d)\n", node->point.x, node->point.y);
+                node = node->parent;
+                nivel++;
+            }
+            printf("O caminho foi encotrado com profundidade %d/n",nivel);
+        }
+
 }
 
 void exibirOpcoesLabirinto(int tamanhoMatriz)
@@ -289,9 +460,12 @@ int main(void)
 
       switch (opcaoAlgoritmo)
       {
-      case 1:
-        buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada, &path);
-        break;
+          case 1:
+              buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada, &path);
+              break;
+          case 2:
+              buscaAstar(tamanhoMatriz, matrizSelecionada);
+              break;
       default:
         break;
       }
