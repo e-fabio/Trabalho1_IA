@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <locale.h>
+#include "matrizes_8.h"
 #include "matrizes_9.h"
 #include "matrizes_10.h"
 
@@ -242,7 +243,7 @@ void encontrarPontoFinal(int *x, int *y, int tamanhoMatriz, int **matriz)
 }
 
 int dfs( int **matriz, int x, int y, Stack *path, int depth, int limit, int **visited) {
-    
+
     if (matriz[x][y] == OBSTACLE || depth > limit || visited[x][y]) {
         return 0;
     }
@@ -297,7 +298,7 @@ void buscaAstar (int tamanhoMatriz, int **matriz){
     encontrarPontoFinal(&x, &y, tamanhoMatriz, matriz);
     end.x = x;
     end.y = y;
-    
+
     Node* endNode = aStar(start, end, matriz);
 
         if (endNode == NULL) {
@@ -320,6 +321,23 @@ void exibirOpcoesLabirinto(int tamanhoMatriz)
 {
   switch (tamanhoMatriz)
   {
+  case 8:
+    printf("\n\nOpcao 1:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_1);
+
+    printf("\n\nOpcao 2:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_2);
+
+    printf("\n\nOpcao 3:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_3);
+
+    printf("\n\nOpcao 4:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_4);
+
+    printf("\n\nOpcao 5:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_5);
+    break;
+
   case 9:
     printf("\n\nOpcao 1:\n");
     exibirMatrizFixa(tamanhoMatriz, matriz_1);
@@ -379,6 +397,31 @@ int **selecionarOpcao(int tamanhoMatriz, int opcaoLabirinto)
 {
   switch (tamanhoMatriz)
   {
+
+  case 8:
+    switch (opcaoLabirinto)
+    {
+    case 1:
+      return gerarMatriz(tamanhoMatriz, matriz_8_1);
+      break;
+    case 2:
+      return gerarMatriz(tamanhoMatriz, matriz_8_2);
+      break;
+    case 3:
+      return gerarMatriz(tamanhoMatriz, matriz_8_3);
+      break;
+    case 4:
+      return gerarMatriz(tamanhoMatriz, matriz_8_4);
+      break;
+    case 5:
+      return gerarMatriz(tamanhoMatriz, matriz_8_5);
+      break;
+    default:
+      return gerarMatriz(tamanhoMatriz, matriz_8_1);
+      break;
+    }
+    break;
+
   case 9:
     switch (opcaoLabirinto)
     {
@@ -433,6 +476,137 @@ int **selecionarOpcao(int tamanhoMatriz, int opcaoLabirinto)
   }
 }
 
+/// Funcoes para Subida de Encosta
+int contarVizinhosLivres(Point atual, int **matriz){
+    int livres = 0;
+    if(matriz[atual.x][atual.x + 1] == 1)
+        livres += 1;
+    if(matriz[atual.x][atual.x - 1] == 1)
+        livres += 1;
+    if(matriz[atual.y][atual.y + 1] == 1)
+        livres += 1;
+    if(matriz[atual.y][atual.y - 1] == 1)
+        livres += 1;
+
+    return livres;
+}
+
+double avaliacao(Point atual, Point destino, int **matriz){
+    int distancia = abs(destino.x - atual.x) + abs(destino.y - atual.y);
+    int livres = contarVizinhosLivres(atual, matriz);
+    if(atual.x == destino.x && atual.y == destino.y)
+        return -10; //Para sempre escolher a chegada no objetivo
+
+    if(livres != 0)
+        return distancia - (livres/4);
+
+    return distancia + 10; //Penalização por um caminho sem saida
+}
+
+int subidaEnconta(int tamanhoMatriz, int **matriz){
+    Point inicio;
+    Point fim;
+    int x, y;
+    encontrarPontoPartida(&y,&x, tamanhoMatriz, matriz);
+    inicio.x = x;
+    inicio.y = y;
+    encontrarPontoFinal(&y, &x, tamanhoMatriz, matriz);
+    fim.x = x;
+    fim.y = y;
+
+    Point atual = inicio;
+
+    Point passados[20];
+    passados[0] = inicio;
+    int fim_passados = 1;
+
+    while(atual.x != fim.x || atual.y != fim.y){
+        Point verificado = atual;
+        Point melhor = verificado;
+        int melhor_valor = avaliacao(verificado, fim, matriz);
+
+        int valor_verificado;
+
+        //Vertical de cima para baixo
+        for(int i = atual.y; i < tamanhoMatriz; i++){
+            verificado.y = i;
+            printf("CB: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+            if(matriz[verificado.x][verificado.y] == 0){// Verifica se o movimento seria válido
+                break; //Não é possivel passar por aqui
+            }
+            valor_verificado = avaliacao(verificado, fim, matriz);
+            if(valor_verificado < melhor_valor){
+                printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+                melhor_valor = valor_verificado;
+                melhor = verificado;
+            }
+        }
+
+        //Vertical de baixo pra cima
+        for(int i = atual.y - 1; i >= 0; i--){
+            verificado.y = i;
+            printf("BC: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+            if(matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
+                break; //Não é possivel passar por aqui
+            valor_verificado = avaliacao(verificado, fim, matriz);
+            if(valor_verificado < melhor_valor){
+                printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+                melhor_valor = valor_verificado;
+                melhor = verificado;
+            }
+        }
+        verificado.y = melhor.y;
+
+        //Horizontal da esquerda para direita
+        if(atual.x == melhor.x && atual.y == melhor.y){
+            for(int i = atual.x; i < tamanhoMatriz; i++){
+                verificado.x = i;
+                printf("ED: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+                if(matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
+                    break; //Não é possivel passar por aqui
+                valor_verificado = avaliacao(verificado, fim, matriz);
+                if(valor_verificado < melhor_valor){
+                    printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+                    melhor_valor = valor_verificado;
+                    melhor = verificado;
+                }
+            }
+
+            //Horizontal da direita pra esquerda
+            for(int i = atual.x - 1; i >= 0; i--){
+                verificado.x = i;
+                printf("DE: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+                if(matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
+                    break; //Não é possivel passar por aqui
+                valor_verificado = avaliacao(verificado, fim, matriz);
+                if(valor_verificado < melhor_valor){
+                    printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+                    melhor_valor = valor_verificado;
+                    melhor = verificado;
+                }
+            }
+        }
+
+        if(melhor.x == atual.x && melhor.y == atual.y){
+            printf("Nao chegamos no objetivo, chegamos eim: (%d,%d), o objetivo era (%d, %d).\n", atual.x, atual.y, fim.x, fim.y);
+            break;
+        }else{
+            atual = melhor;
+            passados[fim_passados] = melhor;
+            fim_passados += 1;
+        }
+    }
+
+    //Print do caminho passado pelo robo
+    printf("O robo passou por: (%d, %d) -> ", passados[0].x, passados[0].y);
+    for(int i = 1; i < fim_passados - 1; i++){
+        printf("(%d, %d) -> ", passados[i].x, passados[i].y);
+    }
+    printf("(%d, %d).", passados[fim_passados - 1].x, passados[fim_passados - 1].y);
+}
+
+
+/// --------------------------------------------------------------------------
 int main(void)
 {
   setlocale(LC_ALL, "Portuguese");
@@ -463,8 +637,11 @@ int main(void)
           case 1:
               buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada, &path);
               break;
-          case 2:
+          case 3:
               buscaAstar(tamanhoMatriz, matrizSelecionada);
+              break;
+          case 4:
+              subidaEnconta(tamanhoMatriz, matrizSelecionada);
               break;
       default:
         break;
