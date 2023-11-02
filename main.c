@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <locale.h>
 #include <string.h>
+#include "matrizes_8.h"
 #include "matrizes_9.h"
 #include "matrizes_10.h"
 
@@ -45,10 +46,10 @@ typedef struct Node
   struct Node *parent;
 } Node;
 
-Node *openList[81];
+Node *openList[100];
 int openListSize = 0;
 
-Node *closedList[81];
+Node *closedList[100];
 int closedListSize = 0;
 
 void push(Node *node, Node **list, int *size)
@@ -189,7 +190,7 @@ Node *aStar(Point start, Point end, int **matriz)
 
 typedef struct
 {
-  Point points[81]; // o tamanho máximo do caminho é 81 (9x9)
+  Point *points; // o tamanho máximo do caminho é 81 (9x9)
   int top;
 } Stack;
 
@@ -241,18 +242,13 @@ void exibirMatriz(int tamanhoMatriz, int **matriz)
   }
 }
 
-int encontrouSaida(int x, int y, int tamanhoMatriz, int **matriz)
-{
-  return x >= 0 && x < tamanhoMatriz && y >= 0 && y < tamanhoMatriz && matriz[x][y] == 3;
-}
-
 void encontrarPontoPartida(int *x, int *y, int tamanhoMatriz, int **matriz)
 {
   for (int i = 0; i < tamanhoMatriz; i++)
   {
     for (int j = 0; j < tamanhoMatriz; j++)
     {
-      if (matriz[i][j] == 2)
+      if (matriz[i][j] == START)
       {
         *x = i;
         *y = j;
@@ -268,7 +264,7 @@ void encontrarPontoFinal(int *x, int *y, int tamanhoMatriz, int **matriz)
   {
     for (int j = 0; j < tamanhoMatriz; j++)
     {
-      if (matriz[i][j] == 3)
+      if (matriz[i][j] == END)
       {
         *x = i;
         *y = j;
@@ -278,9 +274,8 @@ void encontrarPontoFinal(int *x, int *y, int tamanhoMatriz, int **matriz)
   }
 }
 
-int dfs(int **matriz, int x, int y, Stack *path, int depth, int limit, int **visited)
+int dfs(int tamanhoMatriz, int **matriz, int x, int y, Stack *path, int depth, int limit, int **visited)
 {
-
   if (matriz[x][y] == OBSTACLE || depth > limit || visited[x][y])
   {
     return 0;
@@ -294,10 +289,10 @@ int dfs(int **matriz, int x, int y, Stack *path, int depth, int limit, int **vis
   }
   matriz[x][y] = OBSTACLE;
   stack_push(path, x, y);
-  if ((x > 0 && dfs(matriz, x - 1, y, path, depth + 1, limit, visited)) ||
-      (x < 8 && dfs(matriz, x + 1, y, path, depth + 1, limit, visited)) ||
-      (y > 0 && dfs(matriz, x, y - 1, path, depth + 1, limit, visited)) ||
-      (y < 8 && dfs(matriz, x, y + 1, path, depth + 1, limit, visited)))
+  if ((x > 0 && dfs(tamanhoMatriz, matriz, x - 1, y, path, depth + 1, limit, visited)) ||
+      (x < tamanhoMatriz - 1 && dfs(tamanhoMatriz, matriz, x + 1, y, path, depth + 1, limit, visited)) ||
+      (y > 0 && dfs(tamanhoMatriz, matriz, x, y - 1, path, depth + 1, limit, visited)) ||
+      (y < tamanhoMatriz - 1 && dfs(tamanhoMatriz, matriz, x, y + 1, path, depth + 1, limit, visited)))
   {
     return 1;
   }
@@ -305,10 +300,27 @@ int dfs(int **matriz, int x, int y, Stack *path, int depth, int limit, int **vis
   stack_pop(path);
   return 0;
 }
-int buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz, Stack *path)
+
+void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
 {
+  Stack *path = (Stack *)malloc(sizeof(Stack));
+  path->points = malloc((tamanhoMatriz * tamanhoMatriz * sizeof(Point *)));
+
+  stack_init(path);
+
+  int **matriz = (int **)malloc(tamanhoMatriz * sizeof(int *));
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    matriz[i] = malloc(tamanhoMatriz * sizeof(int));
+  }
+
+  for (int i = 0; i < tamanhoMatriz; i++)
+    for (int j = 0; j < tamanhoMatriz; j++)
+      matriz[i][j] = matrizSelecionada[i][j];
+
   int x, y;
   encontrarPontoPartida(&x, &y, tamanhoMatriz, matriz);
+
   for (int limit = 1;; limit++)
   {
     int **visitados = (int **)malloc(tamanhoMatriz * sizeof(int *));
@@ -318,7 +330,9 @@ int buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz, Stack *path)
     }
     zerarMatriz(tamanhoMatriz, visitados); // limpa a matriz visited
     nodes_visited = 0;                     // Zera o contador
-    if (dfs(matriz, x, y, path, 0, limit, visitados))
+    exibirMatriz(tamanhoMatriz, matriz);
+
+    if (dfs(tamanhoMatriz, matriz, x, y, path, 0, limit, visitados))
     {
       printf("Número de nós visitados: %d\n", nodes_visited);
       printf("Caminho encontrado com limite %d:\n", limit);
@@ -326,10 +340,38 @@ int buscaProfundidadeIterativa(int tamanhoMatriz, int **matriz, Stack *path)
       {
         printf("(%d, %d)\n", path->points[k].x, path->points[k].y);
       }
-      return 0;
+
+      for (int i = 0; i < tamanhoMatriz; i++)
+      {
+        free(visitados[i]);
+      }
+      free(visitados);
+      free(path->points);
+      free(path);
+      for (int i = 0; i < tamanhoMatriz; i++)
+      {
+        free(matriz[i]);
+      }
+      free(matriz);
+
+      return;
     }
+
+    for (int i = 0; i < tamanhoMatriz; i++)
+    {
+      free(visitados[i]);
+    }
+    free(visitados);
   }
+
   printf("Caminho não encontrado.\n");
+  free(path->points);
+  free(path);
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    free(matriz[i]);
+  }
+  free(matriz);
 }
 
 void buscaAstar(int tamanhoMatriz, int **matriz)
@@ -436,8 +478,13 @@ int **gerarMatrizAdjacencias(int tamanhoMatriz, int **matrizLabirinto, int *vert
   return matrizAdjacencias;
 }
 
-void buscaLargura(int tamanhoMatriz, int **matriz, int s)
+void buscaLargura(int tamanhoMatrizLabirinto, int **matrizLabirinto)
 {
+  int verticeAtual;
+  int **matrizAdjacencias = gerarMatrizAdjacencias(tamanhoMatrizLabirinto, matrizLabirinto, &verticeAtual);
+  int tamanhoMatriz = tamanhoMatrizLabirinto * tamanhoMatrizLabirinto;
+  printf("\nVertice inicial: %d\n", verticeAtual);
+
   int qtdNosVisitados = 1;
 
   int *pilha = (int *)malloc(tamanhoMatriz * sizeof(int *));
@@ -451,8 +498,8 @@ void buscaLargura(int tamanhoMatriz, int **matriz, int s)
   for (i = 0; i < tamanhoMatriz; i++)
     vetorDistancias[i] = -1;
 
-  vetorDistancias[s] = 0;
-  pilha[++rear] = s;
+  vetorDistancias[verticeAtual] = 0;
+  pilha[++rear] = verticeAtual;
 
   int **caminhosVertices = (int **)malloc(tamanhoMatriz * sizeof(int *));
   for (int i = 0; i < tamanhoMatriz; i++)
@@ -464,35 +511,35 @@ void buscaLargura(int tamanhoMatriz, int **matriz, int s)
   int *tamanhosCaminhosVertices = (int *)malloc(tamanhoMatriz * sizeof(int *));
   zerarVetor(tamanhoMatriz, tamanhosCaminhosVertices);
 
-  caminhosVertices[s][tamanhosCaminhosVertices[s]++] = s;
+  caminhosVertices[verticeAtual][tamanhosCaminhosVertices[verticeAtual]++] = verticeAtual;
 
   int verticeFinal = -1;
 
   while (front <= rear)
   {
-    s = pilha[front++];
+    verticeAtual = pilha[front++];
     for (i = 0; i < tamanhoMatriz; i++)
     {
-      if (matriz[s][i] == END && vetorDistancias[i] == -1)
+      if (matrizAdjacencias[verticeAtual][i] == END && vetorDistancias[i] == -1)
       {
         verticeFinal = i;
       }
 
-      if (matriz[s][i] && vetorDistancias[i] == -1)
+      if (matrizAdjacencias[verticeAtual][i] && vetorDistancias[i] == -1)
       {
-        vetorDistancias[i] = vetorDistancias[s] + 1;
+        vetorDistancias[i] = vetorDistancias[verticeAtual] + 1;
         pilha[++rear] = i;
 
         if (verticeFinal == -1)
           qtdNosVisitados++;
 
-        for (int j = 0; j < tamanhosCaminhosVertices[s]; j++)
+        for (int j = 0; j < tamanhosCaminhosVertices[verticeAtual]; j++)
         {
-          caminhosVertices[i][j] = caminhosVertices[s][j];
+          caminhosVertices[i][j] = caminhosVertices[verticeAtual][j];
         }
 
-        caminhosVertices[i][tamanhosCaminhosVertices[s]] = i;
-        tamanhosCaminhosVertices[i] = tamanhosCaminhosVertices[s] + 1;
+        caminhosVertices[i][tamanhosCaminhosVertices[verticeAtual]] = i;
+        tamanhosCaminhosVertices[i] = tamanhosCaminhosVertices[verticeAtual] + 1;
       }
     }
   }
@@ -523,12 +570,184 @@ void buscaLargura(int tamanhoMatriz, int **matriz, int s)
     free(caminhosVertices[i]);
   }
   free(caminhosVertices);
+
+  for (int i = 0; i < tamanhoMatriz; i++)
+  {
+    free(matrizAdjacencias[i]);
+  }
+  free(matrizAdjacencias);
 }
+
+/// Funcoes para Subida de Encosta
+int contarVizinhosLivres(Point atual, int **matriz)
+{
+  int livres = 0;
+  if (matriz[atual.x][atual.x + 1] == 1)
+    livres += 1;
+  if (matriz[atual.x][atual.x - 1] == 1)
+    livres += 1;
+  if (matriz[atual.y][atual.y + 1] == 1)
+    livres += 1;
+  if (matriz[atual.y][atual.y - 1] == 1)
+    livres += 1;
+
+  return livres;
+}
+
+double avaliacao(Point atual, Point destino, int **matriz)
+{
+  int distancia = abs(destino.x - atual.x) + abs(destino.y - atual.y);
+  int livres = contarVizinhosLivres(atual, matriz);
+  if (atual.x == destino.x && atual.y == destino.y)
+    return -10; // Para sempre escolher a chegada no objetivo
+
+  if (livres != 0)
+    return distancia - (livres / 4);
+
+  return distancia + 10; // Penalização por um caminho sem saida
+}
+
+void subidaEnconta(int tamanhoMatriz, int **matriz)
+{
+  Point inicio;
+  Point fim;
+  int x, y;
+  encontrarPontoPartida(&y, &x, tamanhoMatriz, matriz);
+  inicio.x = x;
+  inicio.y = y;
+  encontrarPontoFinal(&y, &x, tamanhoMatriz, matriz);
+  fim.x = x;
+  fim.y = y;
+
+  Point atual = inicio;
+
+  Point passados[20];
+  passados[0] = inicio;
+  int fim_passados = 1;
+
+  while (atual.x != fim.x || atual.y != fim.y)
+  {
+    Point verificado = atual;
+    Point melhor = verificado;
+    int melhor_valor = avaliacao(verificado, fim, matriz);
+
+    int valor_verificado;
+
+    // Vertical de cima para baixo
+    for (int i = atual.y; i < tamanhoMatriz; i++)
+    {
+      verificado.y = i;
+      printf("CB: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+      if (matriz[verificado.x][verificado.y] == 0)
+      {        // Verifica se o movimento seria válido
+        break; // Não é possivel passar por aqui
+      }
+      valor_verificado = avaliacao(verificado, fim, matriz);
+      if (valor_verificado < melhor_valor)
+      {
+        printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+        melhor_valor = valor_verificado;
+        melhor = verificado;
+      }
+    }
+
+    // Vertical de baixo pra cima
+    for (int i = atual.y - 1; i >= 0; i--)
+    {
+      verificado.y = i;
+      printf("BC: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+      if (matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
+        break;                                     // Não é possivel passar por aqui
+      valor_verificado = avaliacao(verificado, fim, matriz);
+      if (valor_verificado < melhor_valor)
+      {
+        printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+        melhor_valor = valor_verificado;
+        melhor = verificado;
+      }
+    }
+    verificado.y = melhor.y;
+
+    // Horizontal da esquerda para direita
+    if (atual.x == melhor.x && atual.y == melhor.y)
+    {
+      for (int i = atual.x; i < tamanhoMatriz; i++)
+      {
+        verificado.x = i;
+        printf("ED: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+        if (matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
+          break;                                     // Não é possivel passar por aqui
+        valor_verificado = avaliacao(verificado, fim, matriz);
+        if (valor_verificado < melhor_valor)
+        {
+          printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+          melhor_valor = valor_verificado;
+          melhor = verificado;
+        }
+      }
+
+      // Horizontal da direita pra esquerda
+      for (int i = atual.x - 1; i >= 0; i--)
+      {
+        verificado.x = i;
+        printf("DE: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
+        if (matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
+          break;                                     // Não é possivel passar por aqui
+        valor_verificado = avaliacao(verificado, fim, matriz);
+        if (valor_verificado < melhor_valor)
+        {
+          printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
+          melhor_valor = valor_verificado;
+          melhor = verificado;
+        }
+      }
+    }
+
+    if (melhor.x == atual.x && melhor.y == atual.y)
+    {
+      printf("Nao chegamos no objetivo, chegamos eim: (%d,%d), o objetivo era (%d, %d).\n", atual.x, atual.y, fim.x, fim.y);
+      break;
+    }
+    else
+    {
+      atual = melhor;
+      passados[fim_passados] = melhor;
+      fim_passados += 1;
+    }
+  }
+
+  // Print do caminho passado pelo robo
+  printf("O robo passou por: (%d, %d) -> ", passados[0].x, passados[0].y);
+  for (int i = 1; i < fim_passados - 1; i++)
+  {
+    printf("(%d, %d) -> ", passados[i].x, passados[i].y);
+  }
+  printf("(%d, %d).", passados[fim_passados - 1].x, passados[fim_passados - 1].y);
+}
+
+/// --------------------------------------------------------------------------
 
 void exibirOpcoesLabirinto(int tamanhoMatriz)
 {
   switch (tamanhoMatriz)
   {
+  case 8:
+    printf("\n\nOpcao 1:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_1);
+
+    printf("\n\nOpcao 2:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_2);
+
+    printf("\n\nOpcao 3:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_3);
+
+    printf("\n\nOpcao 4:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_4);
+
+    printf("\n\nOpcao 5:\n");
+    exibirMatrizFixa(tamanhoMatriz, matriz_8_5);
+    break;
+
   case 9:
     printf("\n\nOpcao 1:\n");
     exibirMatrizFixa(tamanhoMatriz, matriz_1);
@@ -588,6 +807,30 @@ int **selecionarOpcao(int tamanhoMatriz, int opcaoLabirinto)
 {
   switch (tamanhoMatriz)
   {
+  case 8:
+    switch (opcaoLabirinto)
+    {
+    case 1:
+      return gerarMatriz(tamanhoMatriz, matriz_8_1);
+      break;
+    case 2:
+      return gerarMatriz(tamanhoMatriz, matriz_8_2);
+      break;
+    case 3:
+      return gerarMatriz(tamanhoMatriz, matriz_8_3);
+      break;
+    case 4:
+      return gerarMatriz(tamanhoMatriz, matriz_8_4);
+      break;
+    case 5:
+      return gerarMatriz(tamanhoMatriz, matriz_8_5);
+      break;
+    default:
+      return gerarMatriz(tamanhoMatriz, matriz_8_1);
+      break;
+    }
+    break;
+
   case 9:
     switch (opcaoLabirinto)
     {
@@ -646,10 +889,8 @@ int main(void)
 {
   setlocale(LC_ALL, "Portuguese");
 
-  int tamanhoMatriz, opcaoLabirinto, opcaoAlgoritmo, verticeInicial;
+  int tamanhoMatriz, opcaoLabirinto, opcaoAlgoritmo;
 
-  Stack path;
-  stack_init(&path);
   do
   {
     printf("\n\n~~~~~~ Labirinto ~~~~~~\n\n");
@@ -671,22 +912,16 @@ int main(void)
       switch (opcaoAlgoritmo)
       {
       case 1:
-        buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada, &path);
+        buscaProfundidadeIterativa(tamanhoMatriz, matrizSelecionada);
         break;
-      case 2:;
-        int **matrizAdjacencias = gerarMatrizAdjacencias(tamanhoMatriz, matrizSelecionada, &verticeInicial);
-        printf("\nVertice inicial: %d\n", verticeInicial);
-        // exibirMatriz(tamanhoMatriz * tamanhoMatriz, matrizAdjacencias);
-        buscaLargura(tamanhoMatriz * tamanhoMatriz, matrizAdjacencias, verticeInicial);
-        for (int i = 0; i < tamanhoMatriz; i++)
-        {
-          free(matrizAdjacencias[i]);
-        }
-        free(matrizAdjacencias);
+      case 2:
+        buscaLargura(tamanhoMatriz, matrizSelecionada);
         break;
       case 3:
         buscaAstar(tamanhoMatriz, matrizSelecionada);
         break;
+      case 4:
+        subidaEnconta(tamanhoMatriz, matrizSelecionada);
       default:
         break;
       }
