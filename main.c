@@ -611,7 +611,7 @@ int contarVizinhosLivres(Point atual, int **matriz, int tamanhoMatriz)
     if (matriz[atual.x][vizinho] == 1)
       livres += 1;
 
-  return livres;
+  return livres - 1; //Pelo menos 1 lado precisa estar livre para ser uma casa válida, portanto quero desconsidera-la
 }
 
 double avaliacao(Point atual, Point destino, int **matriz, int tamanhoMatriz)
@@ -623,31 +623,98 @@ double avaliacao(Point atual, Point destino, int **matriz, int tamanhoMatriz)
     return -10; // Para sempre escolher a chegada no objetivo
 
   if (livres != 0)
-    return distancia - livres;
+    return distancia - (livres/2);
 
   return distancia + 10; // Penalização por um caminho sem saida
 }
 
+Point encontrarSegundaMelhorOpcao(Point penultimo,Point fim, int **matriz, int tamanhoMatriz) {
+    Point segundoMelhor = penultimo;
+    int melhor = avaliacao(penultimo, fim, matriz, tamanhoMatriz);
+    int segundoMelhorAva = 10000000;
+
+    // Verifica vizinhos à direita
+    for(int i = penultimo.x + 1; i < tamanhoMatriz; i++) {
+        Point verificado = {i, penultimo.y};
+        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+
+        if (matriz[verificado.x][verificado.y] == 0)
+            break;
+
+        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
+            segundoMelhorAva = verificadoAva;
+            segundoMelhor = verificado;
+        }
+    }
+
+    // Verifica vizinhos à esquerda
+    for(int i = penultimo.x - 1; i >= 0; i--) {
+        Point verificado = {i, penultimo.y};
+        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+
+        if (matriz[verificado.x][verificado.y] == 0)
+            break;
+
+        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
+            segundoMelhorAva = verificadoAva;
+            segundoMelhor = verificado;
+        }
+    }
+
+    // Verifica vizinhos abaixo
+    for(int i = penultimo.y + 1; i < tamanhoMatriz; i++) {
+        Point verificado = {penultimo.x, i};
+        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+
+        if (matriz[verificado.x][verificado.y] == 0)
+            break;
+
+        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
+            segundoMelhorAva = verificadoAva;
+            segundoMelhor = verificado;
+        }
+    }
+
+    // Verifica vizinhos acima
+    for(int i = penultimo.y - 1; i >= 0; i--) {
+        Point verificado = {penultimo.x, i};
+        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+
+        if (matriz[verificado.x][verificado.y] == 0)
+            break;
+
+        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
+            segundoMelhorAva = verificadoAva;
+            segundoMelhor = verificado;
+        }
+    }
+
+    return segundoMelhor;
+}
+
+
 void subidaEncosta(int tamanhoMatriz, int **matriz)
 {
-  Point inicio;
-  Point fim;
   int x, y;
   encontrarPontoPartida(&x, &y, tamanhoMatriz, matriz);
-  inicio.x = x;
-  inicio.y = y;
+  const Point inicio = {x, y};
   encontrarPontoFinal(&x, &y, tamanhoMatriz, matriz);
-  fim.x = x;
-  fim.y = y;
+  const Point fim = {x, y};
 
   Point atual = inicio;
 
-  Point passados[20]; // Talvez  colocar uma fila com alocação dinamica depois
+  Point passados[100];
   passados[0] = inicio;
   int fim_passados = 1;
 
+  int nos_visitados = 0;
+
+  int flag = 0;
+  int flag2 = 0;
+
   while (atual.x != fim.x || atual.y != fim.y)
   {
+    flag = 0;
     Point verificado = atual;
     Point melhor = verificado;
     int melhor_valor = avaliacao(verificado, fim, matriz, tamanhoMatriz);
@@ -655,9 +722,10 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
     int valor_verificado;
 
     // Vertical de cima para baixo
-    for (int i = atual.y; i < tamanhoMatriz; i++)
+    for (int i = atual.y + 1; i < tamanhoMatriz; i++)
     {
       verificado.y = i;
+      nos_visitados += 1;
       if (matriz[verificado.x][verificado.y] == 0)
       {        // Verifica se o movimento seria válido
         break; // Não é possivel passar por aqui
@@ -668,6 +736,8 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
         // printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
         melhor_valor = valor_verificado;
         melhor = verificado;
+        flag = 1;
+        flag2 = 0;
       }
       // printf("CB: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
     }
@@ -676,6 +746,7 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
     for (int i = atual.y - 1; i >= 0; i--)
     {
       verificado.y = i;
+      nos_visitados += 1;
       if (matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
         break;                                     // Não é possivel passar por aqui
       valor_verificado = avaliacao(verificado, fim, matriz, tamanhoMatriz);
@@ -684,20 +755,25 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
         // printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
         melhor_valor = valor_verificado;
         melhor = verificado;
+        flag = 1;
+        flag2 = 0;
       }
       // printf("BC: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
     }
 
     // Adiciona a casa escolhida na vertical
     atual = melhor; /// Escolhe a melhor casa da vertical para andar
-    passados[fim_passados] = melhor;
-    fim_passados += 1;
-    verificado = melhor;
+    if(flag == 1){ //Adiciona só se um novo nó foi escolhido
+        passados[fim_passados] = melhor;
+        fim_passados += 1;
+    }
 
+    verificado = melhor;
     // Horizontal esquerda para direita
-    for (int i = atual.x; i < tamanhoMatriz; i++)
+    for (int i = atual.x + 1; i < tamanhoMatriz; i++)
     {
       verificado.x = i;
+      nos_visitados += 1;
       if (matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
         break;                                     // Não é possivel passar por aqui
       valor_verificado = avaliacao(verificado, fim, matriz, tamanhoMatriz);
@@ -706,6 +782,8 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
         // printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
         melhor_valor = valor_verificado;
         melhor = verificado;
+        flag = 2;
+        flag2 = 0;
       }
       // printf("ED: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
     }
@@ -714,6 +792,7 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
     for (int i = atual.x - 1; i >= 0; i--)
     {
       verificado.x = i;
+      nos_visitados += 1;
       if (matriz[verificado.x][verificado.y] == 0) // Verifica se o movimento seria válido
         break;                                     // Não é possivel passar por aqui
       valor_verificado = avaliacao(verificado, fim, matriz, tamanhoMatriz);
@@ -722,28 +801,43 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
         // printf("Mudou o melhor de (%d, %d) para (%d, %d)", melhor.x, melhor.y, verificado.x, verificado.y);
         melhor_valor = valor_verificado;
         melhor = verificado;
+        flag = 2;
+        flag2 = 0;
       }
       // printf("DE: Ponto estudado =  (%d, %d), com avaliacao: %d, i = %d, tamanho = %d\n", verificado.x, verificado.y, valor_verificado, i, tamanhoMatriz);
     }
 
     atual = melhor; /// Escolhe a melhor casa da vertical para andar
-    passados[fim_passados] = melhor;
-    fim_passados += 1;
+    if(flag == 2){ //Adiciona só se andou
+        passados[fim_passados] = melhor;
+        fim_passados += 1;
+    }
+
+    if(flag == 0){ //MAXIMO LOCAL
+        printf("Segundo melhor.\n");
+        printf("Atual = (%d, %d).\n", atual.x, atual.y);
+        // Chama encontrarSegundaMelhorOpcao para o penúltimo ponto da lista
+        atual = encontrarSegundaMelhorOpcao(passados[fim_passados-2],fim,matriz,tamanhoMatriz);
+        printf("Segundo melhor = (%d, %d).\n", atual.x, atual.y);
+        flag2 = 1;
+    }
+    if(flag2 == 1){
+        printf("So foi possivel chegar em: (%d,%d)", atual.x, atual.y);
+        break;
+    }
   }
 
   // Print do caminho passado pelo robo
   if (atual.x == fim.x && atual.y == fim.y)
   {
+    printf("Inicio: (%d, %d), fim (%d,%d).\n", inicio.x, inicio.y, fim.x, fim.y);
+    printf("Nos visitados: %d.\n", nos_visitados);
     printf("O robo passou por: (%d, %d) -> ", passados[0].x, passados[0].y);
     for (int i = 1; i < fim_passados - 1; i++)
     {
       printf("(%d, %d) -> ", passados[i].x, passados[i].y);
     }
     printf("(%d, %d). Para chegar no objetivo.", passados[fim_passados - 1].x, passados[fim_passados - 1].y);
-  }
-  else
-  {
-    printf("Não chegamos no objetivo, chegamos eim: (%d,%d)", atual.x, atual.y);
   }
 }
 
