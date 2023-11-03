@@ -7,13 +7,13 @@
 #include "matrizes_9.h"
 #include "matrizes_10.h"
 
-//usamos as palavras para deixar claro que 1 representa caminho livre, 0 representa obstáculos(paredes), o 2 representa o inicio e o 3 final(objetivo).
+// usamos as palavras para deixar claro que 1 representa caminho livre, 0 representa obstáculos(paredes), o 2 representa o inicio e o 3 final(objetivo).
 #define FREE 1
 #define OBSTACLE 0
 #define START 2
 #define END 3
 
-//autoexplciativa
+// autoexplciativa
 void zerarMatriz(int tamanhoMatriz, int **matriz)
 {
   for (int i = 0; i < tamanhoMatriz; i++)
@@ -25,7 +25,7 @@ void zerarMatriz(int tamanhoMatriz, int **matriz)
   }
 }
 
-//autoexplciativa
+// autoexplciativa
 void zerarVetor(int tamanhoVetor, int *vetor)
 {
   for (int i = 0; i < tamanhoVetor; i++)
@@ -49,10 +49,10 @@ typedef struct Node
   struct Node *pai;
 } Node;
 
-Node *listaAberta[100]; //usada para a busca Astar
+Node *listaAberta[100]; // usada para a busca Astar
 int tamanhoListaAberta = 0;
 
-Node *listaFechada[100]; //usada para a busca Astar
+Node *listaFechada[100]; // usada para a busca Astar
 int tamanhoListaFechada = 0;
 
 void push(Node *node, Node **list, int *size)
@@ -78,7 +78,7 @@ void pop(Node *node, Node **list, int *size)
   }
 }
 
-//usada na Aestrela
+// usada na Aestrela
 Node *ultimoNo()
 {
   Node *ultimo = listaAberta[0];
@@ -91,27 +91,27 @@ Node *ultimoNo()
   }
   return ultimo;
 }
-//funcao para executar a funcao heuristica. Apos pesquisar, optamos por usar a distancia de manhattan, que eh uma métrica em que a distância entre dois pontos é a soma das diferenças absolutas de suas coordenadas.
+// funcao para executar a funcao heuristica. Apos pesquisar, optamos por usar a distancia de manhattan, que eh uma métrica em que a distância entre dois pontos é a soma das diferenças absolutas de suas coordenadas.
 int heuristica(Point inicio, Point final)
 {
   return abs(inicio.x - final.x) + abs(inicio.y - final.y);
 }
 
-//busca aStar de fato.
+// busca aStar de fato.
 Node *aStar(Point inicio, Point final, int tamanhoMatriz, int **matriz)
 {
-    //cria o no
+  // cria o no
   Node *noInicial = (Node *)malloc(sizeof(Node));
   noInicial->point = inicio;
   noInicial->g = 0;
-  noInicial->h = heuristica(inicio, final); //heuristica
+  noInicial->h = heuristica(inicio, final); // heuristica
   noInicial->f = noInicial->g + noInicial->h;
   noInicial->pai = NULL;
 
   tamanhoListaAberta = 0;
   tamanhoListaFechada = 0;
 
-    //adiciona o no na lista aberta
+  // adiciona o no na lista aberta
   push(noInicial, listaAberta, &tamanhoListaAberta);
 
   while (tamanhoListaAberta > 0)
@@ -201,7 +201,7 @@ Node *aStar(Point inicio, Point final, int tamanhoMatriz, int **matriz)
   return NULL;
 }
 
-//pilha que usamos na busca em profundidade
+// pilha que usamos na busca em profundidade
 typedef struct
 {
   Point *points; // o tamanho máximo do caminho é 81 (9x9)
@@ -296,7 +296,7 @@ int buscaProfundidade(int tamanhoMatriz, int **matriz, int x, int y, Stack *path
   }
   if (visitados[x][y] != 1)
   {
-    nodes_visited++;
+    nos_visitados++;
     visitados[x][y] = 1;
   }
 
@@ -323,7 +323,7 @@ int buscaProfundidade(int tamanhoMatriz, int **matriz, int x, int y, Stack *path
 
 void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
 {
-    //iniciamos a pilha
+  // iniciamos a pilha
   Stack *path = (Stack *)malloc(sizeof(Stack));
   path->points = malloc((tamanhoMatriz * tamanhoMatriz * sizeof(Point *)));
 
@@ -334,7 +334,7 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
   {
     matriz[i] = malloc(tamanhoMatriz * sizeof(int));
   }
-//copiamos a matriz para utilizarmos nesta funcao e nao mexer nela
+  // copiamos a matriz para utilizarmos nesta funcao e nao mexer nela
   for (int i = 0; i < tamanhoMatriz; i++)
     for (int j = 0; j < tamanhoMatriz; j++)
       matriz[i][j] = matrizSelecionada[i][j];
@@ -350,11 +350,11 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
       visitados[i] = malloc(tamanhoMatriz * sizeof(int));
     }
     zerarMatriz(tamanhoMatriz, visitados);
-    nodes_visited = 0; // Zera o contador
+    nos_visitados = 0; // Zera o contador
 
     if (buscaProfundidade(tamanhoMatriz, matriz, x, y, path, 0, limit, visitados))
     {
-        //printa os resultados
+      // printa os resultados
       printf("Número de nós visitados: %d\n", nos_visitados);
       printf("Caminho encontrado com limite %d:\n", limit);
       for (int k = 0; k <= path->top; k++)
@@ -362,7 +362,7 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
         printf("(%d, %d)\n", path->points[k].x, path->points[k].y);
       }
 
-      //libera as pilhas
+      // libera as pilhas
       for (int i = 0; i < tamanhoMatriz; i++)
       {
         free(visitados[i]);
@@ -412,7 +412,7 @@ void buscaAstar(int tamanhoMatriz, int **matriz)
   nos_visitados = 0;
   nivel = -1;
 
-    //chama a busca Aestrela de fato.
+  // chama a busca Aestrela de fato.
   Node *endNode = aStar(start, end, tamanhoMatriz, matriz);
 
   if (endNode == NULL)
@@ -421,7 +421,7 @@ void buscaAstar(int tamanhoMatriz, int **matriz)
   }
   else
   {
-      //imprime os caminhos
+    // imprime os caminhos
     printf("Número de nós visitados: %d\n", nos_visitados);
     printf("Caminho encontrado:\n");
     Node *node = endNode;
@@ -636,7 +636,7 @@ int contarVizinhosLivres(Point atual, int **matriz, int tamanhoMatriz)
     if (matriz[atual.x][vizinho] == 1)
       livres += 1;
 
-  return livres - 1; //Pelo menos 1 lado precisa estar livre para ser uma casa válida, portanto quero desconsidera-la
+  return livres - 1; // Pelo menos 1 lado precisa estar livre para ser uma casa válida, portanto quero desconsidera-la
 }
 
 double avaliacao(Point atual, Point destino, int **matriz, int tamanhoMatriz)
@@ -648,75 +648,83 @@ double avaliacao(Point atual, Point destino, int **matriz, int tamanhoMatriz)
     return -10; // Para sempre escolher a chegada no objetivo
 
   if (livres != 0)
-    return distancia - (livres/2);
+    return distancia - (livres / 2);
 
   return distancia + 10; // Penalização por um caminho sem saida
 }
 
-Point encontrarSegundaMelhorOpcao(Point penultimo,Point fim, int **matriz, int tamanhoMatriz) {
-    Point segundoMelhor = penultimo;
-    int melhor = avaliacao(penultimo, fim, matriz, tamanhoMatriz);
-    int segundoMelhorAva = 10000000;
+Point encontrarSegundaMelhorOpcao(Point penultimo, Point fim, int **matriz, int tamanhoMatriz)
+{
+  Point segundoMelhor = penultimo;
+  int melhor = avaliacao(penultimo, fim, matriz, tamanhoMatriz);
+  int segundoMelhorAva = 10000000;
 
-    // Verifica vizinhos à direita
-    for(int i = penultimo.x + 1; i < tamanhoMatriz; i++) {
-        Point verificado = {i, penultimo.y};
-        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+  // Verifica vizinhos à direita
+  for (int i = penultimo.x + 1; i < tamanhoMatriz; i++)
+  {
+    Point verificado = {i, penultimo.y};
+    int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
 
-        if (matriz[verificado.x][verificado.y] == 0)
-            break;
+    if (matriz[verificado.x][verificado.y] == 0)
+      break;
 
-        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
-            segundoMelhorAva = verificadoAva;
-            segundoMelhor = verificado;
-        }
+    if (verificadoAva < segundoMelhorAva && verificadoAva > melhor)
+    {
+      segundoMelhorAva = verificadoAva;
+      segundoMelhor = verificado;
     }
+  }
 
-    // Verifica vizinhos à esquerda
-    for(int i = penultimo.x - 1; i >= 0; i--) {
-        Point verificado = {i, penultimo.y};
-        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+  // Verifica vizinhos à esquerda
+  for (int i = penultimo.x - 1; i >= 0; i--)
+  {
+    Point verificado = {i, penultimo.y};
+    int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
 
-        if (matriz[verificado.x][verificado.y] == 0)
-            break;
+    if (matriz[verificado.x][verificado.y] == 0)
+      break;
 
-        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
-            segundoMelhorAva = verificadoAva;
-            segundoMelhor = verificado;
-        }
+    if (verificadoAva < segundoMelhorAva && verificadoAva > melhor)
+    {
+      segundoMelhorAva = verificadoAva;
+      segundoMelhor = verificado;
     }
+  }
 
-    // Verifica vizinhos abaixo
-    for(int i = penultimo.y + 1; i < tamanhoMatriz; i++) {
-        Point verificado = {penultimo.x, i};
-        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+  // Verifica vizinhos abaixo
+  for (int i = penultimo.y + 1; i < tamanhoMatriz; i++)
+  {
+    Point verificado = {penultimo.x, i};
+    int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
 
-        if (matriz[verificado.x][verificado.y] == 0)
-            break;
+    if (matriz[verificado.x][verificado.y] == 0)
+      break;
 
-        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
-            segundoMelhorAva = verificadoAva;
-            segundoMelhor = verificado;
-        }
+    if (verificadoAva < segundoMelhorAva && verificadoAva > melhor)
+    {
+      segundoMelhorAva = verificadoAva;
+      segundoMelhor = verificado;
     }
+  }
 
-    // Verifica vizinhos acima
-    for(int i = penultimo.y - 1; i >= 0; i--) {
-        Point verificado = {penultimo.x, i};
-        int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
+  // Verifica vizinhos acima
+  for (int i = penultimo.y - 1; i >= 0; i--)
+  {
+    Point verificado = {penultimo.x, i};
+    int verificadoAva = avaliacao(verificado, fim, matriz, tamanhoMatriz);
 
-        if (matriz[verificado.x][verificado.y] == 0)
-            break;
+    if (matriz[verificado.x][verificado.y] == 0)
+      break;
 
-        if (verificadoAva < segundoMelhorAva && verificadoAva > melhor) {
-            segundoMelhorAva = verificadoAva;
-            segundoMelhor = verificado;
-        }
+    if (verificadoAva < segundoMelhorAva && verificadoAva > melhor)
+    {
+      segundoMelhorAva = verificadoAva;
+      segundoMelhor = verificado;
     }
+  }
 
-    return segundoMelhor;
+  return segundoMelhor;
 }
-
 
 void subidaEncosta(int tamanhoMatriz, int **matriz)
 {
@@ -788,9 +796,10 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
 
     // Adiciona a casa escolhida na vertical
     atual = melhor; /// Escolhe a melhor casa da vertical para andar
-    if(flag == 1){ //Adiciona só se um novo nó foi escolhido
-        passados[fim_passados] = melhor;
-        fim_passados += 1;
+    if (flag == 1)
+    { // Adiciona só se um novo nó foi escolhido
+      passados[fim_passados] = melhor;
+      fim_passados += 1;
     }
 
     verificado = melhor;
@@ -833,22 +842,25 @@ void subidaEncosta(int tamanhoMatriz, int **matriz)
     }
 
     atual = melhor; /// Escolhe a melhor casa da vertical para andar
-    if(flag == 2){ //Adiciona só se andou
-        passados[fim_passados] = melhor;
-        fim_passados += 1;
+    if (flag == 2)
+    { // Adiciona só se andou
+      passados[fim_passados] = melhor;
+      fim_passados += 1;
     }
 
-    if(flag == 0){ //MAXIMO LOCAL
-        printf("Segundo melhor.\n");
-        printf("Atual = (%d, %d).\n", atual.x, atual.y);
-        // Chama encontrarSegundaMelhorOpcao para o penúltimo ponto da lista
-        atual = encontrarSegundaMelhorOpcao(passados[fim_passados-2],fim,matriz,tamanhoMatriz);
-        printf("Segundo melhor = (%d, %d).\n", atual.x, atual.y);
-        flag2 = 1;
+    if (flag == 0)
+    { // MAXIMO LOCAL
+      printf("Segundo melhor.\n");
+      printf("Atual = (%d, %d).\n", atual.x, atual.y);
+      // Chama encontrarSegundaMelhorOpcao para o penúltimo ponto da lista
+      atual = encontrarSegundaMelhorOpcao(passados[fim_passados - 2], fim, matriz, tamanhoMatriz);
+      printf("Segundo melhor = (%d, %d).\n", atual.x, atual.y);
+      flag2 = 1;
     }
-    if(flag2 == 1){
-        printf("So foi possivel chegar em: (%d,%d)", atual.x, atual.y);
-        break;
+    if (flag2 == 1)
+    {
+      printf("So foi possivel chegar em: (%d,%d)", atual.x, atual.y);
+      break;
     }
   }
 
