@@ -282,20 +282,20 @@ void encontrarPontoFinal(int *x, int *y, int tamanhoMatriz, int **matriz)
 
 int buscaProfundidade(int tamanhoMatriz, int **matriz, int x, int y, Stack *path, int nivel, int nivelMaximo, int **visitados)
 {
-  if (matriz[x][y] == OBSTACLE || nivel > nivelMaximo || visitados[x][y])
+  if (matriz[x][y] == OBSTACLE || nivel > nivelMaximo)
   {
     return 0;
   }
-  visitados[x][y] = 1;
+  if (visitados[x][y] != 1)
+  {
+    nodes_visited++;
+    visitados[x][y] = 1;
+  }
 
-  // printf("nivel %d - nivel maximo %d\n", nivel, nivelMaximo);
-  // exibirMatriz(tamanhoMatriz, visitados);
-  // printf("\n");
-
-  nodes_visited++;
   if (matriz[x][y] == END)
   {
     stack_push(path, x, y);
+
     return 1;
   }
   matriz[x][y] = OBSTACLE;
@@ -309,6 +309,7 @@ int buscaProfundidade(int tamanhoMatriz, int **matriz, int x, int y, Stack *path
   }
   matriz[x][y] = FREE; // desmarca a célula atual
   stack_pop(path);
+
   return 0;
 }
 
@@ -339,10 +340,8 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
     {
       visitados[i] = malloc(tamanhoMatriz * sizeof(int));
     }
-    zerarMatriz(tamanhoMatriz, visitados); // limpa a matriz visited
-    nodes_visited = 0;                     // Zera o contador
-    // exibirMatriz(tamanhoMatriz, matriz);
-    // printf("\n");
+    zerarMatriz(tamanhoMatriz, visitados);
+    nodes_visited = 0; // Zera o contador
 
     if (buscaProfundidade(tamanhoMatriz, matriz, x, y, path, 0, limit, visitados))
     {
@@ -352,7 +351,6 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
       {
         printf("(%d, %d)\n", path->points[k].x, path->points[k].y);
       }
-      // exibirMatriz(tamanhoMatriz, visitados);
 
       for (int i = 0; i < tamanhoMatriz; i++)
       {
@@ -378,6 +376,7 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
   }
 
   printf("Caminho não encontrado.\n");
+
   free(path->points);
   free(path);
   for (int i = 0; i < tamanhoMatriz; i++)
