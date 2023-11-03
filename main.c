@@ -32,7 +32,7 @@ void zerarVetor(int tamanhoVetor, int *vetor)
 }
 
 int nodes_visited = 0;
-int nivel = 0;
+int nivel = -1; // Variável inicia em -1 para desconsiderar o ponto de partida
 
 typedef struct
 {
@@ -102,6 +102,9 @@ Node *aStar(Point start, Point end, int tamanhoMatriz, int **matriz)
   startNode->f = startNode->g + startNode->h;
   startNode->parent = NULL;
 
+  openListSize = 0;
+  closedListSize = 0;
+
   push(startNode, openList, &openListSize);
 
   while (openListSize > 0)
@@ -119,7 +122,10 @@ Node *aStar(Point start, Point end, int tamanhoMatriz, int **matriz)
     {
       for (int dy = -1; dy <= 1; dy++)
       {
-        if (dx == 0 && dy == 0)
+        // Bloquear movimentos na diagonal
+        // dx = 1 || dx = -1 -> dy = 0
+        // dy = 1 || dy = -1 -> dx = 0
+        if (abs(dx) == abs(dy))
         {
           continue;
         }
@@ -274,13 +280,18 @@ void encontrarPontoFinal(int *x, int *y, int tamanhoMatriz, int **matriz)
   }
 }
 
-int dfs(int tamanhoMatriz, int **matriz, int x, int y, Stack *path, int depth, int limit, int **visited)
+int buscaProfundidade(int tamanhoMatriz, int **matriz, int x, int y, Stack *path, int nivel, int nivelMaximo, int **visitados)
 {
-  if (matriz[x][y] == OBSTACLE || depth > limit || visited[x][y])
+  if (matriz[x][y] == OBSTACLE || nivel > nivelMaximo || visitados[x][y])
   {
     return 0;
   }
-  visited[x][y] = 1;
+  visitados[x][y] = 1;
+
+  // printf("nivel %d - nivel maximo %d\n", nivel, nivelMaximo);
+  // exibirMatriz(tamanhoMatriz, visitados);
+  // printf("\n");
+
   nodes_visited++;
   if (matriz[x][y] == END)
   {
@@ -289,10 +300,10 @@ int dfs(int tamanhoMatriz, int **matriz, int x, int y, Stack *path, int depth, i
   }
   matriz[x][y] = OBSTACLE;
   stack_push(path, x, y);
-  if ((x > 0 && dfs(tamanhoMatriz, matriz, x - 1, y, path, depth + 1, limit, visited)) ||
-      (x < tamanhoMatriz - 1 && dfs(tamanhoMatriz, matriz, x + 1, y, path, depth + 1, limit, visited)) ||
-      (y > 0 && dfs(tamanhoMatriz, matriz, x, y - 1, path, depth + 1, limit, visited)) ||
-      (y < tamanhoMatriz - 1 && dfs(tamanhoMatriz, matriz, x, y + 1, path, depth + 1, limit, visited)))
+  if ((x > 0 && buscaProfundidade(tamanhoMatriz, matriz, x - 1, y, path, nivel + 1, nivelMaximo, visitados)) ||
+      (x < tamanhoMatriz - 1 && buscaProfundidade(tamanhoMatriz, matriz, x + 1, y, path, nivel + 1, nivelMaximo, visitados)) ||
+      (y > 0 && buscaProfundidade(tamanhoMatriz, matriz, x, y - 1, path, nivel + 1, nivelMaximo, visitados)) ||
+      (y < tamanhoMatriz - 1 && buscaProfundidade(tamanhoMatriz, matriz, x, y + 1, path, nivel + 1, nivelMaximo, visitados)))
   {
     return 1;
   }
@@ -321,7 +332,7 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
   int x, y;
   encontrarPontoPartida(&x, &y, tamanhoMatriz, matriz);
 
-  for (int limit = 1;; limit++)
+  for (int limit = 1; limit < tamanhoMatriz * tamanhoMatriz; limit++)
   {
     int **visitados = (int **)malloc(tamanhoMatriz * sizeof(int *));
     for (int i = 0; i < tamanhoMatriz; i++)
@@ -330,9 +341,10 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
     }
     zerarMatriz(tamanhoMatriz, visitados); // limpa a matriz visited
     nodes_visited = 0;                     // Zera o contador
-    exibirMatriz(tamanhoMatriz, matriz);
+    // exibirMatriz(tamanhoMatriz, matriz);
+    // printf("\n");
 
-    if (dfs(tamanhoMatriz, matriz, x, y, path, 0, limit, visitados))
+    if (buscaProfundidade(tamanhoMatriz, matriz, x, y, path, 0, limit, visitados))
     {
       printf("Número de nós visitados: %d\n", nodes_visited);
       printf("Caminho encontrado com limite %d:\n", limit);
@@ -340,6 +352,7 @@ void buscaProfundidadeIterativa(int tamanhoMatriz, int **matrizSelecionada)
       {
         printf("(%d, %d)\n", path->points[k].x, path->points[k].y);
       }
+      // exibirMatriz(tamanhoMatriz, visitados);
 
       for (int i = 0; i < tamanhoMatriz; i++)
       {
@@ -387,7 +400,7 @@ void buscaAstar(int tamanhoMatriz, int **matriz)
   end.y = y;
 
   nodes_visited = 0;
-  nivel = 0;
+  nivel = -1;
 
   Node *endNode = aStar(start, end, tamanhoMatriz, matriz);
 
